@@ -1,0 +1,1 @@
+# generativeai-with-snowflake-part-2
