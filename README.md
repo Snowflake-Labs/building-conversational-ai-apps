@@ -1,1 +1,1 @@
-# generativeai-with-snowflake-part-2
+# Building Conversational AI Apps to Talk to your Data
