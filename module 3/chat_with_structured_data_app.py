@@ -162,20 +162,17 @@ def answer_question_using_analyst(query: str):
                 }
             ]
             options = {"guardrails": True}
-            response = Complete("claude-3-5-sonnet", messages, options=options)
-            response_messages = json.loads(response)["choices"][0]["messages"]
+            response = Complete("claude-3-5-sonnet", messages, options=options, stream = True)
     except Exception as e:
         st.error(f"Error generating final answer: {e}")
         return [{"role": "assistant", "content": f"**Error**: Unable to generate final answer. {e}"}]
 
-    return response_messages
+    return response
 
 
 def display_messages():
     """
     Renders the entire UI chat from st.session_state.messages
-    (NOT the same as st.session_state.analyst_conversation,
-     which is just for the Analyst.)
     """
     for message in st.session_state.messages:
         role = message["role"]
@@ -185,29 +182,25 @@ def display_messages():
         elif role == "assistant":
             st.chat_message("assistant", avatar="🤖").write(content)
 
-# ------------------------------------------------------------------
-# Button to clear conversation
 if st.button("Clear Conversation"):
     st.session_state.messages.clear()
     st.session_state.analyst_conversation.clear()
 
-# ------------------------------------------------------------------
-# Display any existing conversation
+# Show existing conversation
 display_messages()
 
-# Prompt user for a new question
+# Prompt user
 user_input = st.chat_input("What is the highest revenue in each sales region?")
 
 if user_input:
-    # Show user message right away
+    # Show user's message right away
     st.chat_message("user").write(user_input)
     st.session_state.messages.append({"role": "user", "content": user_input})
 
-    # Get an answer from the Analyst + LLM
-    ai_answer = answer_question_using_analyst(user_input)
+    # Generate streaming tokens from the LLM
+    ai_answer_generator = answer_question_using_analyst(user_input)  # must be a generator
 
-    # Store the LLM's answer in session_state
-    st.session_state.messages.append({"role": "assistant", "content": ai_answer})
+    final_text = st.chat_message("assistant", avatar = "🤖").write_stream(ai_answer_generator)
 
-    # Use .write() to preserve newlines and avoid Markdown quirks
-    st.chat_message("assistant", avatar="🤖").write(ai_answer)
+    # Store the completed text so it remains on subsequent runs
+    st.session_state.messages.append({"role": "assistant", "content": final_text})
