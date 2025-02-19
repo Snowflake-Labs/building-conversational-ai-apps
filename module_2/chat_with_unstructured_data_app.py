@@ -42,7 +42,7 @@ class CortexSearchRetriever:
         search_service = (
             root.databases["CORTEX_SEARCH_TUTORIAL_DB"]
             .schemas["PUBLIC"]
-            .cortex_search_services["FOMC_SEACH_SERVICE"]
+            .cortex_search_services["FOMC_SEARCH_SERVICE"]
         )
         resp = search_service.search(
             query=query,
