@@ -13,22 +13,9 @@ st.title("Chat with Cortex Search RAG")
 from snowflake.core import Root
 from typing import List
 from snowflake.snowpark.session import Session
-
-from trulens.core import TruSession
-from trulens.connectors.snowflake import SnowflakeConnector
-from trulens.apps.custom import instrument, TruCustomApp
-from trulens.core.schema.app import RecordIngestMode
-from trulens.core.feedback.feedback import Feedback
-from trulens.providers.cortex.provider import Cortex
-from trulens.core import Select
-from trulens.dashboard import streamlit as trulens_st
 import numpy as np
 
 from snowflake.cortex import Complete
-
-tru_snowflake_connector = SnowflakeConnector(snowpark_session=session)
-
-tru_session = TruSession(connector=tru_snowflake_connector)
      
 # -- A simple CortexSearchRetriever that queries your search service --
 class CortexSearchRetriever:
@@ -61,7 +48,6 @@ class RAG:
     def __init__(self):
         self.retriever = CortexSearchRetriever(session, limit_to_retrieve=5)
 
-    @instrument
     def retrieve_context(self, query: str) -> List[str]:
         """
         Retrieve relevant text from vector store (instrumented).
@@ -87,7 +73,6 @@ class RAG:
         updated_messages.append({"role": "system", "content": context_message_content})
         return updated_messages
 
-    @instrument
     def generate_completion_stream(self, messages):
         """
         Stream the response from 'claude-3-5-sonnet', using the entire conversation messages.
@@ -101,42 +86,6 @@ class RAG:
 
 # Instantiate the RAG
 rag = RAG()
-
-# ------------------------------------------------------------------
-# TruLens Setup for feedbacks
-# ------------------------------------------------------------------
-provider = Cortex(session, "claude-3-5-sonnet")
-
-f_groundedness = (
-    Feedback(provider.groundedness_measure_with_cot_reasons, name="Groundedness")
-    .on(Select.RecordCalls.retrieve_context.rets[:].collect())  # on retrieved chunks
-    .on_output()
-)
-
-f_context_relevance = (
-    Feedback(provider.context_relevance, name="Context Relevance")
-    .on_input()
-    .on(Select.RecordCalls.retrieve_context.rets[:])
-    .aggregate(np.mean)
-)
-
-f_answer_relevance = (
-   Feedback(provider.relevance, name="Answer Relevance")
-    .on_input()
-    .on_output()
-    .aggregate(np.mean)
-)
-
-tru_snowflake_connector = SnowflakeConnector(snowpark_session=session, init_server_side=True)
-tru_session = TruSession(connector=tru_snowflake_connector)
-
-tru_rag = TruCustomApp(
-    rag,
-    app_name="FOMC RAG",
-    app_version="v1",
-    feedbacks=[f_groundedness, f_answer_relevance, f_context_relevance],
-    record_ingest_mode=RecordIngestMode.BUFFERED,
-)
 
 # ------------------------------------------------------------------
 # 2. Streamlit Chat Logic
@@ -188,10 +137,8 @@ def answer_question_using_rag(query: str):
 
     # -- STEP 4: Stream the final LLM response
     with st.spinner("Generating response..."):
-        with tru_rag as recording:
-            stream = rag.generate_completion_stream(updated_messages)
-            record = recording.get()
-    return stream, record
+        stream = rag.generate_completion_stream(updated_messages)
+    return stream
 
 def main():
     user_input = st.chat_input("Ask your question about FOMC or economic data...")
@@ -202,7 +149,7 @@ def main():
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         # Step 2: Call the RAG pipeline to get a streaming generator
-        stream, record = answer_question_using_rag(user_input)
+        stream = answer_question_using_rag(user_input)
 
         # Step 3: Display the final LLM streaming response
         final_text = st.chat_message("assistant", avatar="🤖").write_stream(stream)
