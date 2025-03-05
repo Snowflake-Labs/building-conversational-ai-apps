@@ -1,9 +1,5 @@
 import streamlit as st
 import json
-import requests
-from typing import List
-import re
-
 import _snowflake
 from snowflake.snowpark.context import get_active_session
 from snowflake.cortex import Complete
