@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import _snowflake
 from snowflake.snowpark.context import get_active_session
-from snowflake.cortex import Complete
+from snowflake.cortex import complete
 
 # -- Snowflake session --
 session = get_active_session()
@@ -153,12 +153,12 @@ def answer_question_using_analyst(query: str):
                     "content": (
                         f"The user asked: {query}\n\n"
                         f"The SQL results are:\n{markdown_sql_output}\n\n"
-                        "Please provide a concise answer."
+                        "Please answer the question concisely, without extra details."
                     )
                 }
             ]
             options = {"guardrails": True}
-            response = Complete("claude-3-5-sonnet", messages, options=options, stream = True)
+            response = complete("claude-3-5-sonnet", messages, options=options, stream = True)
     except Exception as e:
         st.error(f"Error generating final answer: {e}")
         return [{"role": "assistant", "content": f"**Error**: Unable to generate final answer. {e}"}]
