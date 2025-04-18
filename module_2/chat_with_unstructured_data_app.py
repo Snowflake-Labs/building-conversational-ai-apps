@@ -15,7 +15,7 @@ from typing import List
 from snowflake.snowpark.session import Session
 import numpy as np
 
-from snowflake.cortex import Complete
+from snowflake.cortex import complete
      
 # -- A simple CortexSearchRetriever that queries your search service --
 class CortexSearchRetriever:
@@ -77,7 +77,7 @@ class RAG:
         """
         Stream the response from 'claude-3-5-sonnet', using the entire conversation messages.
         """
-        stream = Complete(
+        stream = complete(
             "claude-3-5-sonnet",
             messages,
             stream=True
